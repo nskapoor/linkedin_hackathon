@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+
+<html>
+
+<body>
+<h1> My first heading </h1>
+
+<p id="demo"> </p>
+
+
+<button type = "button" 
+onclick = "myFunc()"> Button </button>
+
+<a href="file:///Users/Neha/hackathon/linkedin_hack/sample2.html">Visit local page!</a>
+
+<script>
+function myFunc() {
+    document.getElementById("demo").innerHTML = Date();
+    var msg = new SpeechSynthesisUtterance('Hello Neha');
+    speechSynthesis.speak(msg);
+}
+</script>
+
+</body>
+
+</html>
+
+
