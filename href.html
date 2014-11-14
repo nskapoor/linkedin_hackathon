@@ -1,0 +1,90 @@
+<html>
+<body>
+<div id="demo"><h2>Before updating </div>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script>
+var url = 'http://api.alice.com/cors';
+//var $jq;
+//var xhr = createCORSRequest('GET', url);
+//xhr.send();
+ makeCorsRequest();
+ 
+// Create the XHR object.
+function createCORSRequest(method, url) {
+  var xhr = new XMLHttpRequest();
+  if ("withCredentials" in xhr) {
+    // XHR for Chrome/Firefox/Opera/Safari.
+    xhr.open(method, url, true);
+  } else if (typeof XDomainRequest != "undefined") {
+    // XDomainRequest for IE.
+    xhr = new XDomainRequest();
+    xhr.open(method, url);
+  } else {
+    // CORS not supported.
+    xhr = null;
+  }
+  return xhr;
+}
+
+// Helper method to parse the title tag from the response.
+function getTitle(text) {
+  return text.match('<title>(.*)?</title>')[1];
+}
+
+// Make the actual CORS request.
+function makeCorsRequest() {
+  // All HTML5 Rocks properties support CORS.
+  //var url = 'http://updates.html5rocks.com';
+    var url = 'http://www.gizmodo.com';
+  var xhr = createCORSRequest('GET', url);
+  if (!xhr) {
+    alert('CORS not supported');
+    return;
+  }
+
+  // Response handlers.
+  xhr.onload = function() {
+    var text = xhr.responseText;
+    var title = getTitle(text);
+    alert('Response from CORS request to ' + url + ': ' + title);
+	var query = jQuery(text);
+	/* working example
+	var links = query.find('article');
+	links.each(function(idx, item){
+		console.log ('Article: ' + $(item).text());
+		
+		//var url = $(item).attr('href'); //this worked with finding a
+	}); */
+	
+	
+	var links = query.find('article');// working
+	links.each(function(idx, item){
+		var url = $(item).children("header");
+		//var link = $(url).attr('href');
+		console.log('link from child is:' + $(url).text());
+		//var url = jQuery(item).children('a');
+		/*url.each(function(idx1, item1){
+			var link = $(item1).attr('href');
+			console.log('Inside second each');
+			console.log ('A: ' + $(item1).text());
+		}); */
+		//var url = $(item).text(); //works
+		
+	});
+	
+	//alert(text);
+	//document.getElementById("demo").innerHTML = text;
+	
+	//var links = $(text).$("[href]")	;//("a[href$='*']");
+	//alert(links);
+  };
+
+  xhr.onerror = function() {
+    alert('Woops, there was an error making the request.');
+  };
+
+  xhr.send();
+}
+</script>
+</body>
+</html>
