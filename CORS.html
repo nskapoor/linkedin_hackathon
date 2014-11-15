@@ -1,11 +1,24 @@
 <html>
+<head>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js">
+</script>
 <body>
 <div id="demo"><h2>Before updating </h2></div>
-<button id="click" onclick="makeCorsRequest()">Click me</button>
+<button id="btn">Click me</button>
 
-
+<p id="listdev">Divs will list here!</p>
+</body>
 
 <script>
+
+$(document).ready(function() {
+
+        $("#btn").click(function() {
+            makeCorsRequest();
+        });
+});
+
+
 var url = 'http://api.alice.com/cors';
 //var xhr = createCORSRequest('GET', url);
 //xhr.send();
@@ -38,8 +51,9 @@ function makeCorsRequest() {
     //    var url = 'http://updates.html5rocks.com';
 
         //var url = 'http://www.bbc.com';
-       var url = 'http://html5news.tumblr.com/'
-        //var url = 'http://updates.html5rocks.com';
+       //var url = 'http://localhost:8000/div.html'
+
+       var url = 'http://www.gizmodo.com';
         var xhr = createCORSRequest('GET', url);
         if (!xhr) {
                 alert('CORS not supported');
@@ -49,9 +63,11 @@ function makeCorsRequest() {
         // Response handlers.
         xhr.onload = function() {
                 var text = xhr.responseText;
-                var title = getTitle(text);
-                alert('Response from CORS request to ' + url + ': ' + title);
-                document.getElementById("demo").innerHTML = text;
+                //var title = getTitle(text);
+                //alert('Response from CORS request to ' + url + ': ' + title);
+                alert(text);
+                //document.getElementById("demo").innerHTML = text;
+                getAllLinks(text);
         };
 
         xhr.onerror = function() {
@@ -60,6 +76,91 @@ function makeCorsRequest() {
 
         xhr.send();
 }
+
+function getAllLinks(text) {
+        var query = jQuery(text);
+        var links = query.find('article');// working
+        
+        /* Speech Recog logic */
+        var recognizing;
+        var recognition = new webkitSpeechRecognition();
+        recognition.continuous = true;
+        recognition.onend = reset();
+        recognition.start();
+        recognizing = true;
+
+        console.log("length is : " + links.length);
+        /* TTS */
+        var ssu = new SpeechSynthesisUtterance();
+        ssu.lang = 'en-US';
+        ssu.rate = 1;
+        ssu.onend = speechOnEnd;
+        var tts_timer;
+
+        var i = 0;
+        var url = $(links[i]).children("header");
+        ssu.text = $(url).text();
+        console.log("text is: " + $(url).text());
+        speechSynthesis.speak(ssu);
+
+        
+        function speechOnEnd() {
+                tts_timer = setTimeout(timerEnd,7000);
+        }
+
+        function timerEnd() 
+        {
+                i++;
+                if (i > 5) {
+                        return;
+                }
+                var url = $(links[i]).children("header");
+                if (url.length == 0) {
+                        console.log("No header found"); 
+                } //else {
+                        ssu.text = $(url).text();
+                        console.log("index and text is: " + i +" " + $(url).text());
+                        speechSynthesis.speak(ssu);
+                //}
+        }
+
+        recognition.onresult = function (event) {
+                console.log("in on result!!");
+                var speech = "";
+                for (var i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                                speech = speech.concat(event.results[i][0].transcript);
+                        }
+                }
+                console.log("Speech recognised: " + speech);
+                if (speech.match(/next/gi)) {
+                        console.log("input was next");
+                        speechSynthesis.cancel(ssu);
+                        /* If next is uttered during the timer delay */
+                        clearTimeout(tts_timer);   
+                        timerEnd();
+                } else if (speech.match(/read/gi)) {
+                        read();
+                }else if (speech.match(/quit/gi)) {
+                        console.log("input was quit");
+                        clearTimeout(tts_timer);   
+                        speechSynthesis.cancel(ssu);
+                        if (recognizing) {
+                                recognition.stop();
+                                reset();
+                        }
+                }
+
+        }
+
+        function read() {
+        }
+
+        function reset() {
+                recognizing = false;
+        }
+}
+
+
 </script>
-</body>
 </html>
