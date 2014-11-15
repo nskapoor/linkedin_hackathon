@@ -1,31 +1,110 @@
 <html>
 <head>
+
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js">
 </script>
+
+<style>
+header {
+        color:white;
+        text-align:center;
+        padding:5px;         
+}
+
+section {
+        width:350px;
+        float:left;
+        padding:10px;                
+}
+
+aside {
+        line-height:30px;
+        background-color:red;
+        height:200px;
+        width:150px;
+        float:right
+}
+.inner {
+    position: absolute;
+}
+
+</style>
+
 <body>
+
+<header>
+<!-- <h1> <b> SMART </b> BROWSE - logo and image comes here </h1> -->
+    <img src = "header_final.jpg" />
+</header>
+
+<section>
+<div id="parent_dev">
+        <div id="main_img" class=inner>
+            <img src="working.png" />
+        </div>
+        <!--<div id="text_content" class=inner>
+            <textarea id="text_area" cols='180' rows='30'> </textarea>
+        </div> -->
+</div>
+
+</br>
+</br>
 <div id="demo"><h2>Before updating </h2></div>
 <button id="btn">Click me</button>
 
 <p id="listdev">Divs will list here!</p>
+</section>
+
 </body>
 
 <script>
 
+var recognition = new webkitSpeechRecognition();
+
 $(document).ready(function() {
 
-        $("#btn").click(function() {
-                var url = 'http://www.gizmodo.com';
-                glob_onload = 1;
-                makeCorsRequest(url);
-        });
-});
+        var recognizing;
+        recognition.continuous = true;
+        //recognition.onend = reset;
+        recognition.start();
+        recognizing = true;
 
+        $("#text_content").hide();
+
+        $("#btn").click(function() {
+                
+                var url = 'http://www.gizmodo.com';
+        });
+        
+        recognition.onresult = function (event) {
+                console.log("Speech recognition : on result!!");
+                var speech = "";
+                for (var i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                                speech = speech.concat(event.results[i][0].transcript);
+                        }
+                }
+                console.log("Initial Speech recognised: " + speech);
+                if (speech.match(/gizmodo/gi)) {
+                        var url = "http://www.gizmodo.com";
+                        console.log("url created: " + url);
+                        //recognition.stop();
+                        glob_onload = 1;
+                        makeCorsRequest(url);
+
+                }
+        }
+});
 
 var url = 'http://api.alice.com/cors';
 var glob_onload = 0;
 //var xhr = createCORSRequest('GET', url);
 //xhr.send();
 // Create the XHR object.
+var ssu = new SpeechSynthesisUtterance();
+ssu.lang = 'en-US';
+ssu.rate = 1;
+
 function createCORSRequest(method, url) {
         var xhr = new XMLHttpRequest();
         if ("withCredentials" in xhr) {
@@ -81,37 +160,76 @@ function makeCorsRequest(url) {
 
         xhr.send();
 }
+var read_timer;
+var quit = 0;
 function tts_for_read(read_response) {
 
-        var ssu1 = new SpeechSynthesisUtterance();
-        ssu1.lang = 'en-US';
-        ssu1.rate = 0.75;
-        //ssu1.onend = timerEnd;
+        ssu.onend = readOnEnd;
+        ssu.onerror = readOnError;
+        ssu.onpause = readOnPause;
+
+        ssu.text = "";
+        var article_text = "";
 
         jQuery("p[data-textannotation-id][class!='has-media media-640']",read_response).each(
         function( index ) {
-                console.log("Index:" + index + " " + $(this).text());
-                ssu1.text = $(this).text();
-                speechSynthesis.speak(ssu1);                
+                //console.log("Index:" + index + " " + $(this).text());
+                article_text += $(this).text();
         });
+       
+        console.log("Final text is: " + article_text);
+        var sent = article_text.split(".");
+        console.log("number of sent: "+ sent.length);
+        var cur_sentence_idx = 0;
+        
+        readTimerEnd();
+
+        function readOnEnd() {
+            console.log("Read on end!");
+            if (quit == 0) {
+                read_timer = setTimeout(readTimerEnd, 750);
+            }
+        }
+
+        function readTimerEnd() {
+            console.log("Read timer called!");
+            if (cur_sentence_idx == sent.length) {
+                return;
+            }
+            ssu.text = sent[cur_sentence_idx];
+            cur_sentence_idx++; 
+            speechSynthesis.speak(ssu);
+        }
+
+
+
+        //speechSynthesis.speak("Article complete. Going back to main headlines");
+        //console.log("pending: " + speechSynthesis.pending + "speaking: " + speechSynthesis.speaking +   "paused: " + speechSynthesis.paused);
+
+
+        function readOnError() {
+            console.log("tts read ERROR!!");
+        }
+
+        function readOnPause() {
+            console.log("tts read has PAUSED!! WHY??");
+        }
 }
+
 function getAllLinks(text) {
         var query = jQuery(text);
         var links = query.find('article');// working
         
         /* Speech Recog logic */
         var recognizing;
-        var recognition = new webkitSpeechRecognition();
-        recognition.continuous = true;
-        recognition.onend = reset();
-        recognition.start();
+        //var recognition = new webkitSpeechRecognition();
+        //recognition.continuous = true;
+        //recognition.onend = reset;
+       // recognition.start();
         recognizing = true;
 
         console.log("length is : " + links.length);
         /* TTS */
-        var ssu = new SpeechSynthesisUtterance();
-        ssu.lang = 'en-US';
-        ssu.rate = 1;
         ssu.onend = speechOnEnd;
         var tts_timer, current_url;
 
@@ -120,30 +238,39 @@ function getAllLinks(text) {
         /* Invoke the function which actually runs on timer completion. This happens to trigger the tts
          * for titles which will then carry on from there.
          */
+        //$("#main_img").hide();
+        //$("#text_content").show();
         timerEnd();
         
         function speechOnEnd() {
+                console.log("in speechOnEnd");
                 tts_timer = setTimeout(timerEnd,7000);
         }
 
         function timerEnd() 
         {
-                if (current_hdr_index > 5) {
+                console.log("******* timer on end called! **** ");
+                if (current_hdr_index > 20) {
                         return;
                 }
                 current_url = $(links[current_hdr_index]).children("header");
                 if (current_url.length == 0) {
                         console.log("No header found"); 
                 } //else {
-                        ssu.text = $(current_url).text();
-                        console.log("index and text is: " + current_hdr_index +" " + $(current_url).text());
+                        var cur_url_text = $(current_url).text();
+                        ssu.text = cur_url_text;
+               /*         console.log("index and text is: " + current_hdr_index +" " + cur_url_text);
+                        var cur_text = $("#text_area").val();
+                        console.log("************* text area is: " + cur_text);
+                        cur_url_text += ".&#13;&#10;";
+                        $("#text_area").val(cur_text + cur_url_text); */
+
                         speechSynthesis.speak(ssu);
                 //}
                 current_hdr_index++;
         }
 
         recognition.onresult = function (event) {
-                console.log("in on result!!");
                 var speech = "";
                 for (var i = event.resultIndex; i < event.results.length; ++i) {
                         if (event.results[i].isFinal) {
@@ -159,12 +286,15 @@ function getAllLinks(text) {
                         timerEnd();
                 } else if (speech.match(/listen/gi)) {
                         console.log("in listen");
-                        clearTimeout(tts_timer);   
                         speechSynthesis.cancel(ssu);
+                        console.log("speech synthesis cancelled");
+                        clearTimeout(tts_timer);   
                         read(current_hdr_index);
                 }else if (speech.match(/quit/gi)) {
                         console.log("input was quit");
+                        quit = 1;
                         clearTimeout(tts_timer);   
+                        clearTimeout(read_timer);
                         speechSynthesis.cancel(ssu);
                         if (recognizing) {
                                 recognition.stop();
@@ -176,7 +306,6 @@ function getAllLinks(text) {
 
         function read() {
                 console.log("in function read");
-                console.log($(current_url).attr('href'));
                 var href = $(current_url).find("a");
                 console.log("num of hrefs are:" + href.length);
                 var href_url = $(href).attr('href');
@@ -187,6 +316,7 @@ function getAllLinks(text) {
 
 
         function reset() {
+                console.log("!!!!! Speech recognition on end fired!!");
                 recognizing = false;
         }
 }
