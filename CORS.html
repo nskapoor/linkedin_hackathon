@@ -14,12 +14,15 @@
 $(document).ready(function() {
 
         $("#btn").click(function() {
-            makeCorsRequest();
+                var url = 'http://www.gizmodo.com';
+                glob_onload = 1;
+                makeCorsRequest(url);
         });
 });
 
 
 var url = 'http://api.alice.com/cors';
+var glob_onload = 0;
 //var xhr = createCORSRequest('GET', url);
 //xhr.send();
 // Create the XHR object.
@@ -46,14 +49,13 @@ function getTitle(text) {
 }
 
 // Make the actual CORS request.
-function makeCorsRequest() {
+function makeCorsRequest(url) {
         // All HTML5 Rocks properties support CORS.
     //    var url = 'http://updates.html5rocks.com';
 
         //var url = 'http://www.bbc.com';
        //var url = 'http://localhost:8000/div.html'
 
-       var url = 'http://www.gizmodo.com';
         var xhr = createCORSRequest('GET', url);
         if (!xhr) {
                 alert('CORS not supported');
@@ -65,9 +67,12 @@ function makeCorsRequest() {
                 var text = xhr.responseText;
                 //var title = getTitle(text);
                 //alert('Response from CORS request to ' + url + ': ' + title);
-                alert(text);
                 //document.getElementById("demo").innerHTML = text;
-                getAllLinks(text);
+                if (glob_onload == 1) {
+                        getAllLinks(text);
+                } else if (glob_onload == 2) {
+                        tts_for_read(text);
+                }
         };
 
         xhr.onerror = function() {
@@ -76,7 +81,20 @@ function makeCorsRequest() {
 
         xhr.send();
 }
+function tts_for_read(read_response) {
 
+        var ssu1 = new SpeechSynthesisUtterance();
+        ssu1.lang = 'en-US';
+        ssu1.rate = 0.75;
+        //ssu1.onend = timerEnd;
+
+        jQuery("p[data-textannotation-id][class!='has-media media-640']",read_response).each(
+        function( index ) {
+                console.log("Index:" + index + " " + $(this).text());
+                ssu1.text = $(this).text();
+                speechSynthesis.speak(ssu1);                
+        });
+}
 function getAllLinks(text) {
         var query = jQuery(text);
         var links = query.find('article');// working
@@ -95,14 +113,14 @@ function getAllLinks(text) {
         ssu.lang = 'en-US';
         ssu.rate = 1;
         ssu.onend = speechOnEnd;
-        var tts_timer;
+        var tts_timer, current_url;
 
-        var i = 0;
-        var url = $(links[i]).children("header");
-        ssu.text = $(url).text();
-        console.log("text is: " + $(url).text());
-        speechSynthesis.speak(ssu);
-
+        var current_hdr_index = 0;
+       
+        /* Invoke the function which actually runs on timer completion. This happens to trigger the tts
+         * for titles which will then carry on from there.
+         */
+        timerEnd();
         
         function speechOnEnd() {
                 tts_timer = setTimeout(timerEnd,7000);
@@ -110,18 +128,18 @@ function getAllLinks(text) {
 
         function timerEnd() 
         {
-                i++;
-                if (i > 5) {
+                if (current_hdr_index > 5) {
                         return;
                 }
-                var url = $(links[i]).children("header");
-                if (url.length == 0) {
+                current_url = $(links[current_hdr_index]).children("header");
+                if (current_url.length == 0) {
                         console.log("No header found"); 
                 } //else {
-                        ssu.text = $(url).text();
-                        console.log("index and text is: " + i +" " + $(url).text());
+                        ssu.text = $(current_url).text();
+                        console.log("index and text is: " + current_hdr_index +" " + $(current_url).text());
                         speechSynthesis.speak(ssu);
                 //}
+                current_hdr_index++;
         }
 
         recognition.onresult = function (event) {
@@ -139,8 +157,11 @@ function getAllLinks(text) {
                         /* If next is uttered during the timer delay */
                         clearTimeout(tts_timer);   
                         timerEnd();
-                } else if (speech.match(/read/gi)) {
-                        read();
+                } else if (speech.match(/listen/gi)) {
+                        console.log("in listen");
+                        clearTimeout(tts_timer);   
+                        speechSynthesis.cancel(ssu);
+                        read(current_hdr_index);
                 }else if (speech.match(/quit/gi)) {
                         console.log("input was quit");
                         clearTimeout(tts_timer);   
@@ -154,7 +175,16 @@ function getAllLinks(text) {
         }
 
         function read() {
+                console.log("in function read");
+                console.log($(current_url).attr('href'));
+                var href = $(current_url).find("a");
+                console.log("num of hrefs are:" + href.length);
+                var href_url = $(href).attr('href');
+                console.log("url is: " +href_url);
+                glob_onload = 2;
+                makeCorsRequest(href_url);
         }
+
 
         function reset() {
                 recognizing = false;
